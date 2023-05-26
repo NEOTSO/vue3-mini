@@ -2,13 +2,17 @@ const bucket = new WeakMap();
 
 const data = { foo: true, bar: true };
 let activeEffect;
+const effectStack = [];
 let temp1, temp2;
 
 function effect(fn) {
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
+        effectStack.push(activeEffect);
         fn();
+        effectStack.pop();
+        activeEffect = effectStack[effectStack.length - 1];
     };
     effectFn.deps = [];
     effectFn();
@@ -66,5 +70,4 @@ function trigger(target, key) {
     const effects = depsMap.get(key);
     const effectsToRun = new Set(effects);
     effectsToRun.forEach((effectFn) => effectFn());
-    // effects && effects.forEach((effect) => effect());
 }

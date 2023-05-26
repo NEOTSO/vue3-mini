@@ -23,9 +23,10 @@ const obj = new Proxy(data, {
 });
 
 effect(() => {
+    console.log("effect run");
     document.body.innerText = obj.text;
 });
 
 setTimeout(() => {
-    obj.text = "hello, vue3";
+    obj.noExist = "hello, vue3";
 }, 1000);

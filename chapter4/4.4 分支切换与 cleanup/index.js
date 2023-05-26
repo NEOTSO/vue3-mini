@@ -4,8 +4,21 @@ const data = { ok: true, text: "hello world" };
 let activeEffect;
 
 function effect(fn) {
-    activeEffect = fn;
-    fn();
+    const effectFn = () => {
+        cleanup(effectFn);
+        activeEffect = effectFn;
+        fn();
+    };
+    effectFn.deps = [];
+    effectFn();
+}
+
+function cleanup(effectFn) {
+    for (let i = 0; i < effectFn.deps.length; i++) {
+        const deps = effectFn.deps[i];
+        deps.delete(effectFn);
+    }
+    effectFn.deps.length = 0;
 }
 
 const obj = new Proxy(data, {
@@ -40,11 +53,14 @@ function track(target, key) {
         depsMap.set(key, (deps = new Set()));
     }
     deps.add(activeEffect);
+    activeEffect.deps.push(deps);
 }
 
 function trigger(target, key) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(key);
-    effects && effects.forEach((effect) => effect());
+    const effectsToRun = new Set(effects);
+    effectsToRun.forEach((effectFn) => effectFn());
+    // effects && effects.forEach((effect) => effect());
 }

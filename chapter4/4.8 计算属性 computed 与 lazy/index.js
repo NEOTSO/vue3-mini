@@ -54,10 +54,13 @@ const obj = new Proxy(data, {
     },
 });
 
-const sumRes = computed(() => obj.foo + obj.bar);
+const sumRes = computed(() => {
+    console.log("computed...");
+    return obj.foo + obj.bar;
+});
 
 console.log(sumRes.value);
-obj.foo++;
+// obj.foo++;
 console.log(sumRes.value);
 
 function track(target, key) {

@@ -47,11 +47,26 @@ function computed(getter) {
 }
 
 function watch(source, cb) {
-    effect(() => source.foo, {
+    let getter;
+    if (typeof source === "function") {
+        getter = source;
+    } else {
+        getter = () => traverse(source);
+    }
+    effect(() => getter(), {
         scheduler() {
             cb();
         },
     });
+}
+
+function traverse(value, seen = new Set()) {
+    if (typeof value !== "object" || value === null || seen.has(value)) return;
+    seen.add(value);
+    for (const k in value) {
+        traverse(value[k], seen);
+    }
+    return value;
 }
 
 function cleanup(effectFn) {
@@ -76,6 +91,13 @@ const obj = new Proxy(data, {
 watch(obj, () => {
     console.log("数据变化了");
 });
+
+watch(
+    () => obj.foo,
+    () => {
+        console.log("数据变化了");
+    }
+);
 
 obj.foo++;
 

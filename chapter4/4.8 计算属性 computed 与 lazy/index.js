@@ -27,6 +27,10 @@ function computed(getter) {
     let dirty = true;
     const effectFn = effect(getter, {
         lazy: true,
+        scheduler: () => {
+            dirty = true;
+            trigger(obj, "value");
+        },
     });
 
     const obj = {
@@ -35,6 +39,7 @@ function computed(getter) {
                 value = effectFn();
                 dirty = false;
             }
+            track(obj, "value");
             return value;
         },
     };
@@ -65,9 +70,11 @@ const sumRes = computed(() => {
     return obj.foo + obj.bar;
 });
 
-console.log(sumRes.value);
-// obj.foo++;
-console.log(sumRes.value);
+effect(() => {
+    console.log(sumRes.value);
+});
+
+obj.foo++;
 
 function track(target, key) {
     if (!activeEffect) return target[key];

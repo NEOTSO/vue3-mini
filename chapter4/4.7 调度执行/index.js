@@ -4,7 +4,7 @@ const data = { foo: 1 };
 let activeEffect;
 const effectStack = [];
 
-function effect(fn) {
+function effect(fn, options = {}) {
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
@@ -13,6 +13,7 @@ function effect(fn) {
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1];
     };
+    effectFn.options = options;
     effectFn.deps = [];
     effectFn();
 }
@@ -36,9 +37,16 @@ const obj = new Proxy(data, {
     },
 });
 
-effect(() => {
-    console.log(obj.foo);
-});
+effect(
+    () => {
+        console.log(obj.foo);
+    },
+    {
+        scheduler(fn) {
+            setTimeout(fn);
+        },
+    }
+);
 
 obj.foo++;
 console.log("结束了");
@@ -68,5 +76,11 @@ function trigger(target, key) {
                 effectsToRun.add(effectFn);
             }
         });
-    effectsToRun.forEach((effectFn) => effectFn());
+    effectsToRun.forEach((effectFn) => {
+        if (effectFn.options.scheduler) {
+            effectFn.options.scheduler(effectFn);
+        } else {
+            effectFn();
+        }
+    });
 }

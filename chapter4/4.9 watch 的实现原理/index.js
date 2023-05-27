@@ -53,11 +53,19 @@ function watch(source, cb) {
     } else {
         getter = () => traverse(source);
     }
-    effect(() => getter(), {
+    let oldValue, newValue;
+    const effectFn = effect(() => getter(), {
+        lazy: true,
         scheduler() {
-            cb();
+            newValue = effectFn();
+            console.log("####");
+            console.log(oldValue);
+            console.log(newValue);
+            cb(newValue, oldValue);
+            oldValue = newValue;
         },
     });
+    oldValue = effectFn();
 }
 
 function traverse(value, seen = new Set()) {
@@ -88,14 +96,18 @@ const obj = new Proxy(data, {
     },
 });
 
-watch(obj, () => {
+watch(obj, (newValue, oldValue) => {
     console.log("数据变化了");
+    console.log(oldValue);
+    console.log(newValue);
 });
 
 watch(
     () => obj.foo,
-    () => {
+    (newValue, oldValue) => {
         console.log("数据变化了");
+        console.log(oldValue);
+        console.log(newValue);
     }
 );
 

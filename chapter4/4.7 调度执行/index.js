@@ -1,11 +1,10 @@
 const bucket = new WeakMap();
 
-const data = { foo: true, bar: true };
+const data = { foo: 1 };
 let activeEffect;
 const effectStack = [];
-let temp1, temp2;
 
-function effect(fn) {
+function effect(fn, options = {}) {
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
@@ -14,6 +13,7 @@ function effect(fn) {
         effectStack.pop();
         activeEffect = effectStack[effectStack.length - 1];
     };
+    effectFn.options = options;
     effectFn.deps = [];
     effectFn();
 }
@@ -37,18 +37,19 @@ const obj = new Proxy(data, {
     },
 });
 
-effect(function effectFn1() {
-    console.log("effectFn1 执行");
-    effect(function effectFn2() {
-        console.log("effectFn2 执行");
-        temp2 = obj.bar;
-    });
-    temp1 = obj.foo;
-});
+effect(
+    () => {
+        console.log(obj.foo);
+    },
+    {
+        scheduler(fn) {
+            setTimeout(fn);
+        },
+    }
+);
 
-setTimeout(() => {
-    obj.foo = false;
-}, 1000);
+obj.foo++;
+console.log("结束了");
 
 function track(target, key) {
     if (!activeEffect) return target[key];
@@ -68,6 +69,18 @@ function trigger(target, key) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(key);
-    const effectsToRun = new Set(effects);
-    effectsToRun.forEach((effectFn) => effectFn());
+    const effectsToRun = new Set();
+    effects &&
+        effects.forEach((effectFn) => {
+            if (effectFn !== activeEffect) {
+                effectsToRun.add(effectFn);
+            }
+        });
+    effectsToRun.forEach((effectFn) => {
+        if (effectFn.options.scheduler) {
+            effectFn.options.scheduler(effectFn);
+        } else {
+            effectFn();
+        }
+    });
 }

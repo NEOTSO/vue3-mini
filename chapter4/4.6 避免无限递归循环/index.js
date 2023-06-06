@@ -1,9 +1,8 @@
 const bucket = new WeakMap();
 
-const data = { foo: true, bar: true };
+const data = { foo: 1 };
 let activeEffect;
 const effectStack = [];
-let temp1, temp2;
 
 function effect(fn) {
     const effectFn = () => {
@@ -37,13 +36,8 @@ const obj = new Proxy(data, {
     },
 });
 
-effect(function effectFn1() {
-    console.log("effectFn1 执行");
-    effect(function effectFn2() {
-        console.log("effectFn2 执行");
-        temp2 = obj.bar;
-    });
-    temp1 = obj.foo;
+effect(() => {
+    obj.foo++; // Uncaught RangeError: Maximum call stack size exceeded
 });
 
 setTimeout(() => {
@@ -68,6 +62,12 @@ function trigger(target, key) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(key);
-    const effectsToRun = new Set(effects);
+    const effectsToRun = new Set();
+    effects &&
+        effects.forEach((effectFn) => {
+            if (effectFn !== activeEffect) {
+                effectsToRun.add(effectFn);
+            }
+        });
     effectsToRun.forEach((effectFn) => effectFn());
 }

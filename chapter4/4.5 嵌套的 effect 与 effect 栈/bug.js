@@ -1,6 +1,5 @@
 const bucket = new WeakMap();
 let activeEffect;
-let effectStack = [];
 
 const data = { foo: true, bar: true };
 let temp1, temp2;
@@ -41,11 +40,7 @@ function effect(fn) {
     const effectFn = () => {
         cleanup(effectFn);
         activeEffect = effectFn;
-        effectStack.push(effectFn);
         fn();
-        effectStack.pop();
-        debugger
-        activeEffect = effectStack[effectStack.length - 1];
     };
     effectFn.deps = [];
     effectFn();
@@ -59,6 +54,7 @@ function cleanup(effectFn) {
     effectFn.deps.length = 0;
 }
 
+debugger
 effect(function effectFn1() {
     console.log("effectFn1 run");
     effect(function effectFn2() {

@@ -57,6 +57,10 @@ effect(() => {
 });
 
 setTimeout(() => {
+    obj.ok = false;
+}, 1000);
+
+setTimeout(() => {
     obj.text = "hello vue3";
 }, 2000);
 // 当 obj.ok为false时，理想中修改obj.text不应该再触发依赖函数的执行，但目前实际并非如此。

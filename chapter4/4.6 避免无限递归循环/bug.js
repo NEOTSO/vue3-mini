@@ -33,14 +33,8 @@ function trigger(target, key) {
     const depsMap = bucket.get(target);
     if (!depsMap) return;
     const effects = depsMap.get(key);
-    const effectsToRun = new Set();
-    effects &&
-        effects.forEach((effectFn) => {
-            if (effectFn !== activeEffect) {
-                effectsToRun.add(effectFn);
-            }
-        });
-    effectsToRun.forEach((effectFn) => effectFn());
+    const effectsToRun = new Set(effects);
+    effectsToRun.forEach((fn) => fn());
 }
 
 function effect(fn) {
@@ -50,6 +44,7 @@ function effect(fn) {
         effectStack.push(effectFn);
         fn();
         effectStack.pop();
+        debugger;
         activeEffect = effectStack[effectStack.length - 1];
     };
     effectFn.deps = [];
@@ -65,6 +60,6 @@ function cleanup(effectFn) {
 }
 
 effect(() => {
-    console.log("effect run");
     obj.foo++;
 });
+// Uncaught RangeError: Maximum call stack size exceeded

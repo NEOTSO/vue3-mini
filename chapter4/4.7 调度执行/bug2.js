@@ -1,30 +1,8 @@
 const bucket = new WeakMap();
+let activeEffect;
+let effectStack = [];
 
 const data = { foo: 1 };
-let activeEffect;
-const effectStack = [];
-
-function effect(fn, options = {}) {
-    const effectFn = () => {
-        cleanup(effectFn);
-        activeEffect = effectFn;
-        effectStack.push(activeEffect);
-        fn();
-        effectStack.pop();
-        activeEffect = effectStack[effectStack.length - 1];
-    };
-    effectFn.options = options;
-    effectFn.deps = [];
-    effectFn();
-}
-
-function cleanup(effectFn) {
-    for (let i = 0; i < effectFn.deps.length; i++) {
-        const deps = effectFn.deps[i];
-        deps.delete(effectFn);
-    }
-    effectFn.deps.length = 0;
-}
 
 const obj = new Proxy(data, {
     get(target, key) {
@@ -34,32 +12,17 @@ const obj = new Proxy(data, {
     set(target, key, newVal) {
         target[key] = newVal;
         trigger(target, key);
+        return true;
     },
 });
 
-effect(
-    () => {
-        console.log(obj.foo);
-    },
-    {
-        scheduler(fn) {
-            setTimeout(fn);
-        },
-    }
-);
-
-obj.foo++;
-console.log("结束了");
-
 function track(target, key) {
-    if (!activeEffect) return target[key];
+    if (!activeEffect) return;
     let depsMap = bucket.get(target);
-    if (!depsMap) {
-        bucket.set(target, (depsMap = new Map()));
-    }
+    if (!depsMap) bucket.set(target, (depsMap = new Map()));
     let deps = depsMap.get(key);
-    if (!deps) {
-        depsMap.set(key, (deps = new Set()));
+    if (!deps) depsMap.set(key, (deps = new Set()));
+    if (!deps.has(activeEffect)) {
     }
     deps.add(activeEffect);
     activeEffect.deps.push(deps);
@@ -84,3 +47,32 @@ function trigger(target, key) {
         }
     });
 }
+
+function effect(fn, options = {}) {
+    const effectFn = () => {
+        cleanup(effectFn);
+        activeEffect = effectFn;
+        effectStack.push(effectFn);
+        fn();
+        effectStack.pop();
+        activeEffect = effectStack[effectStack.length - 1];
+    };
+    effectFn.deps = [];
+    effectFn.options = options;
+    effectFn();
+}
+
+function cleanup(effectFn) {
+    for (let i = 0; i < effectFn.deps.length; i++) {
+        const deps = effectFn.deps[i];
+        deps.delete(effectFn);
+    }
+    effectFn.deps.length = 0;
+}
+
+effect(() => {
+    console.log(obj.foo);
+});
+
+obj.foo++;
+obj.foo++;
